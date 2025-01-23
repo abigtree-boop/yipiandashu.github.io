@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇 | Snake Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(91, 173, 254, 0.1) 0%, rgba(91, 224, 254, 0.08) 46.2%, rgba(170, 254, 235, 0.1) 100.3%),
+                linear-gradient(135deg, #1a1a2e 0%, #16213e 100%),
+                radial-gradient(circle at 90% 80%, rgba(79, 172, 254, 0.05) 0%, transparent 50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 8px 32px 0 rgba(0, 0, 0, 0.36),
+                0 0 10px rgba(79, 172, 254, 0.2),
+                inset 0 0 20px rgba(79, 172, 254, 0.1);
+            transition: transform 0.3s ease;
+            display: none;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #00f2fe, #4facfe, #96fbc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            text-shadow: 0 0 30px rgba(79, 172, 254, 0.3);
+            animation: titlePulse 3s infinite ease-in-out;
+        }
+
+        @keyframes titlePulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        #score {
+            font-size: 1.5rem;
+            color: #4facfe;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        #gameCanvas {
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+
+        .controls span {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin: 0.5rem;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid #4facfe;
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .game-over h2 {
+            color: #ff4757;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+        }
+
+        .game-over p {
+            color: #fff;
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #00f2fe, #4facfe);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .game-over .hint {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .game-container {
+                padding: 1rem;
+                width: 95%;
+            }
+
+            #gameCanvas {
+                width: 100%;
+                height: auto;
+            }
+
+            .game-title {
+                font-size: 2rem;
+            }
+        }
+
+        /* 更新开始界面样式 */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(91, 173, 254, 0.1) 0%, transparent 60%),
+                radial-gradient(circle at 100% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            overflow: hidden;
+        }
+
+        /* 添加浮动光效 */
+        .floating-light {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(79, 172, 254, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatLight 15s infinite ease-in-out;
+        }
+
+        @keyframes floatLight {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(100px, 100px); }
+            50% { transform: translate(-100px, 200px); }
+            75% { transform: translate(-200px, -100px); }
+        }
+
+        .start-screen .game-title {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+            animation: titleGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 0 0 10px rgba(0, 242, 254, 0.5); }
+            50% { text-shadow: 0 0 20px rgba(0, 242, 254, 0.8); }
+        }
+
+        .difficulty-container {
+            display: flex;
+            gap: 1.5rem;
+            margin: 2rem 0;
+            perspective: 1000px;
+        }
+
+        .difficulty-btn {
+            padding: 1.2rem 2.5rem;
+            border: 2px solid #4facfe;
+            background: rgba(79, 172, 254, 0.1);
+            color: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+
+        .difficulty-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(79, 172, 254, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .difficulty-btn:hover::before {
+            left: 100%;
+        }
+
+        .difficulty-btn:hover {
+            background: rgba(79, 172, 254, 0.2);
+            transform: translateY(-5px) rotateX(10deg);
+            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .leaderboard {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            margin-top: 3rem;
+            min-width: 400px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            transform: translateY(0);
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(79, 172, 254, 0.2);
+        }
+
+        .leaderboard h3 {
+            color: #4facfe;
+            margin-bottom: 2rem;
+            font-size: 1.5rem;
+            text-align: center;
+            position: relative;
+            padding-bottom: 0.5rem;
+        }
+
+        .leaderboard h3::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4facfe, transparent);
+        }
+
+        .leaderboard-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .leaderboard-item {
+            display: grid;
+            grid-template-columns: 0.5fr 1fr 1fr 1fr;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .leaderboard-item:hover {
+            background: rgba(79, 172, 254, 0.1);
+            transform: scale(1.02);
+        }
+
+        .leaderboard-item span:first-child {
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        /* 添加响应式设计 */
+        @media (max-width: 768px) {
+            .start-screen .game-title {
+                font-size: 3rem;
+            }
+
+            .difficulty-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .leaderboard {
+                min-width: 300px;
+                margin: 2rem 1rem;
+            }
+
+            .leaderboard-item {
+                font-size: 0.9rem;
+                padding: 0.8rem;
+            }
+        }
+
+        /* 清除按钮样式 */
+        .clear-btn {
+            background: linear-gradient(45deg, #ff5757, #ff1f1f);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 15px rgba(255, 87, 87, 0.2);
+            position: relative;
+            overflow: hidden;
+            margin: 1.5rem auto 0;  /* 添加上边距并水平居中 */
+        }
+
+        .clear-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .clear-btn:hover::before {
+            left: 100%;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255, 87, 87, 0.4);
+        }
+
+        .clear-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .clear-icon {
+            font-size: 1.2rem;
+            animation: shake 1s ease infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        /* 游戏布局样式 */
+        .game-layout {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .game-main {
+            flex: 1;
+        }
+
+        .game-sidebar {
+            width: 300px;
+        }
+
+        .leaderboard-mini {
+            margin-top: 0;
+            padding: 1rem;
+            min-width: auto;
+        }
+
+        .leaderboard-mini h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        /* 排行榜项目高亮动画 */
+        @keyframes highlightScore {
+            0% {
+                background: rgba(79, 172, 254, 0.3);
+                transform: scale(1.05);
+            }
+            100% {
+                background: transparent;
+                transform: scale(1);
+            }
+        }
+
+        .leaderboard-item.highlight {
+            animation: highlightScore 2s ease-out;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 1200px) {
+            .game-layout {
+                flex-direction: column;
+            }
+
+            .game-sidebar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="floating-light"></div>
+    <div class="floating-light" style="animation-delay: -5s;"></div>
+    <div class="floating-light" style="animation-delay: -10s;"></div>
+    <div class="start-screen" id="startScreen">
+        <h1 class="game-title">贪吃蛇</h1>
+        <div class="difficulty-container">
+            <button class="difficulty-btn" onclick="startGameWithDifficulty('easy')">简单模式</button>
+            <button class="difficulty-btn" onclick="startGameWithDifficulty('medium')">中等模式</button>
+            <button class="difficulty-btn" onclick="startGameWithDifficulty('hard')">困难模式</button>
+        </div>
+        <div class="leaderboard">
+            <h3>🏆 最高分排行榜 🏆</h3>
+            <ul class="leaderboard-list" id="leaderboardList">
+                <!-- 排行榜内容将由 JavaScript 动态生成 -->
+            </ul>
+            <button class="clear-btn" onclick="clearLeaderboard()">
+                <span class="clear-icon">🗑️</span>
+                清除记录
+            </button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="game-layout">
+            <div class="game-main">
+                <div class="game-header">
+                    <h1 class="game-title">Snake Game</h1>
+                    <div id="score">得分：0</div>
+                </div>
+                <canvas id="gameCanvas" width="400" height="400"></canvas>
+                <div class="controls">
+                    <span>↑ 向上</span>
+                    <span>↓ 向下</span>
+                    <span>← 向左</span>
+                    <span>→ 向右</span>
+                </div>
+            </div>
+            <div class="game-sidebar">
+                <div class="leaderboard leaderboard-mini">
+                    <h3>实时排行</h3>
+                    <ul class="leaderboard-list" id="gameLeaderboardList">
+                        <!-- 游戏中的排行榜 -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOverModal">
+        <h2>游戏结束</h2>
+        <p>最终得分：<span id="finalScore">0</span></p>
+        <div class="btn-container">
+            <button class="btn" onclick="startGameWithDifficulty(currentDifficulty)">重新开始</button>
+            <button class="btn" onclick="backToMainMenu()">返回主菜单</button>
+        </div>
+        <div class="hint">按空格键也可以重新开始</div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html> 
